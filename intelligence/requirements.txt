@@ -1,3 +1,7 @@
 ollama
 pypdfium2
 sentence-transformers
+langchain
+pgvector 
+psycopg2-binary 
+sqlalchemy
