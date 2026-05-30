@@ -18,3 +18,4 @@ class Knowledge(Base):
         default=uuid.uuid4
     )
     chunk_text = mapped_column(String())
+
