@@ -5,3 +5,4 @@ langchain
 pgvector 
 psycopg2-binary 
 sqlalchemy
+fastapi

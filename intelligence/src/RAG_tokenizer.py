@@ -1,10 +1,14 @@
 from pathlib import Path
 import os
-import psycopg2
-from psycopg2.extras import execute_batch
+import logging as log
+
+from sqlalchemy.exc import SQLAlchemyError
+from models.knowledge import Knowledge
 from src.pdf_parser import PDFParser
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from config.db import db
+from src.sentence_embeddings import SentenceEmbeddings
+from sqlalchemy.orm import Session
 
 
 class RAGTokenizer:
@@ -44,57 +48,75 @@ class RAGTokenizer:
 
             chunks = self.splitter.split_text(text)
 
-            for i, chunk in enumerate(chunks):
+            for chunk in chunks:
 
-                all_chunks.append({
-                    "document": file.name,
-                    "chunk_id": i,
-                    "text": chunk
-                })
+                knowledge_chunk = Knowledge(
+                    document_name = file.name,
+                    chunk_text = chunk,
+                    embedding = SentenceEmbeddings.get_embeddings(chunk)
+                )
+                all_chunks.append(knowledge_chunk)
 
         return all_chunks
 
+
     def save_chunks(self):
 
-        conn = db.get_connection()
+        engine = db.get_engine()
 
         try:
 
-            cur = conn.cursor()
-
             chunks = self.create_chunks()
 
-            query = """
-                INSERT INTO document_chunks
-                (
-                    document_name,
-                    chunk_id,
-                    chunk_text
-                )
-                VALUES (%s, %s, %s)
-            """
+            if not chunks:
+                log.warning("No chunks were generated")
+                return
 
-            values = [
-                (
-                    chunk["document"],
-                    chunk["chunk_id"],
-                    chunk["text"]
-                )
-                for chunk in chunks
-            ]
+            with Session(engine) as session:
 
-            execute_batch(cur, query, values)
+                try:
+                    session.add_all(chunks)
+                    session.commit()
 
-            conn.commit()
+                    log.info(
+                        "Successfully added %d chunks",
+                        len(chunks)
+                    )
 
-            print("Chunks saved successfully")
+                except SQLAlchemyError as e:
+                    session.rollback()
+
+                    log.exception(
+                        "Database error while saving chunks"
+                    )
+
+                    raise
+
+                except Exception as e:
+                    session.rollback()
+
+                    log.exception(
+                        "Unexpected error while saving chunks"
+                    )
+
+                    raise
+
+        except FileNotFoundError as e:
+            log.exception(
+                "PDF directory not found"
+            )
+
+        except PermissionError as e:
+            log.exception(
+                "Permission denied while reading PDFs"
+            )
+
+        except ValueError as e:
+            log.exception(
+                "Invalid data encountered during chunk creation"
+            )
 
         except Exception as e:
-
-            conn.rollback()
-
-            print("Error:", e)
-
-        finally:
-
-            db.release_connection(conn)
+            log.exception(
+                "Unexpected error during chunk processing"
+            )

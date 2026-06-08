@@ -1,5 +1,7 @@
 import pypdfium2 as pdfium
 from pathlib import Path
+import time
+
 class PDFParser:
     
     def extract_pdf_content(self,file):
@@ -8,8 +10,3 @@ class PDFParser:
                 for p in pdfium.PdfDocument(file)
         )
         return content
-
-
-if __name__ == "__main__":
-    pdf = PDFParser()
-    pdf.extract_pdf_content()
