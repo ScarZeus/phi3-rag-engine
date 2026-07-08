@@ -6,4 +6,4 @@ class SentenceEmbeddings:
     )
     @classmethod
     def get_embeddings(cls, texts):
-        return cls.model.encode(texts)
+        return cls.model.encode(texts, normalize_embeddings=True)

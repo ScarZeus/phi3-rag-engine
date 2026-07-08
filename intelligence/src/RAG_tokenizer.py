@@ -5,7 +5,7 @@ import logging as log
 from sqlalchemy.exc import SQLAlchemyError
 from models.knowledge import Knowledge
 from src.pdf_parser import PDFParser
-from langchain.text_splitter import RecursiveCharacterTextSplitter
+from langchain_text_splitters import RecursiveCharacterTextSplitter
 from config.db import db
 from src.sentence_embeddings import SentenceEmbeddings
 from sqlalchemy.orm import Session
@@ -27,8 +27,8 @@ class RAGTokenizer:
         )
 
         self.splitter = RecursiveCharacterTextSplitter(
-            chunk_size=1000,
-            chunk_overlap=200
+            chunk_size=400,
+            chunk_overlap=80
         )
 
     def create_chunks(self):
