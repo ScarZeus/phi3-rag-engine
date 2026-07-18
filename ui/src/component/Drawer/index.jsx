@@ -1,99 +1,115 @@
 import { useRef, useState } from "react";
 import "./index.css";
+import useUploads from "../hooks/useUploads";
 
-export default function Drawer() {
+export default function Drawer({ sessionId }) {
+  const [files, setFiles] = useState([]);
 
-    const [files,setFiles]=useState([]);
+  const inputRef = useRef(null);
 
-    const inputRef=useRef(null);
+  const {
+    uploading,
+    uploadedFiles,
+    error,
+    uploadFiles,
+  } = useUploads();
 
-    const handleFiles=(e)=>{
+  const handleFiles = (e) => {
+    setFiles((prev) => [
+      ...prev,
+      ...Array.from(e.target.files),
+    ]);
 
-        setFiles(prev=>[
-            ...prev,
-            ...Array.from(e.target.files)
-        ]);
+    // Allow selecting the same file again later
+    e.target.value = "";
+  };
 
+  const handleUpload = async () => {
+    if (files.length === 0) return;
+
+    try {
+      await uploadFiles(sessionId, files);
+      setFiles([]); // Clear selected files after successful upload
+    } catch (err) {
+      console.error(err);
     }
+  };
 
-    return(
+  return (
+    <aside className="sidebar">
+      <h2>Uploaded Files</h2>
 
-        <aside className="sidebar">
+      <p className="subtitle">
+        Upload and manage your documents.
+      </p>
 
-            <h2>Uploaded Files</h2>
+      <div
+        className="upload-box"
+        onClick={() => inputRef.current.click()}
+      >
+        <div className="upload-icon">☁️</div>
 
-            <p className="subtitle">
-                Upload and manage your documents.
-            </p>
+        <h3>Select Files</h3>
 
+        <p>PDF, DOCX, TXT</p>
+
+        <input
+          hidden
+          ref={inputRef}
+          type="file"
+          multiple
+          onChange={handleFiles}
+        />
+      </div>
+
+      <div className="file-list">
+        {files.length === 0 ? (
+          <p>No files selected.</p>
+        ) : (
+          files.map((file, index) => (
             <div
-                className="upload-box"
-                onClick={()=>inputRef.current.click()}
+              key={index}
+              className="file-card"
             >
+              <span>📄</span>
 
-                <div className="upload-icon">
-                    ☁️
+              <div>
+                <div className="name">
+                  {file.name}
                 </div>
 
-                <h3>Select Files</h3>
-
-                <p>PDF, DOCX, TXT</p>
-
-                <input
-                    hidden
-                    ref={inputRef}
-                    type="file"
-                    multiple
-                    onChange={handleFiles}
-                />
-
+                <div className="size">
+                  {(file.size / 1024).toFixed(1)} KB
+                </div>
+              </div>
             </div>
+          ))
+        )}
+      </div>
 
-            <div className="file-list">
+      {uploadedFiles.length > 0 && (
+        <div className="uploaded-list">
+          <h4>Uploaded</h4>
 
-                {
+          {uploadedFiles.map((name) => (
+            <div key={name}>{name}</div>
+          ))}
+        </div>
+      )}
 
-                    files.length===0 ?
+      {error && (
+        <p className="error">
+          {error}
+        </p>
+      )}
 
-                    <p>No files uploaded.</p>
-
-                    :
-
-                    files.map((file,index)=>(
-
-                        <div
-                            key={index}
-                            className="file-card"
-                        >
-
-                            <span>📄</span>
-
-                            <div>
-
-                                <div className="name">
-                                    {file.name}
-                                </div>
-
-                                <div className="size">
-                                    {(file.size/1024).toFixed(1)} KB
-                                </div>
-
-                            </div>
-
-                        </div>
-
-                    ))
-
-                }
-
-            </div>
-
-            <button className="upload-btn">
-                Upload
-            </button>
-
-        </aside>
-
-    );
-
+      <button
+        className="upload-btn"
+        onClick={handleUpload}
+        disabled={uploading || files.length === 0}
+      >
+        {uploading ? "Uploading..." : "Upload"}
+      </button>
+    </aside>
+  );
 }
